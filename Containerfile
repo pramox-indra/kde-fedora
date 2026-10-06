@@ -8,34 +8,20 @@ RUN mkdir /var/roothome
 # INSTALL REPOS
 RUN dnf -y install dnf5-plugins
 RUN dnf -y copr enable ngompa/bcachefs
-
 # Prepare bcachefs
 RUN <<INSTALLBC
-#!/usr/bin/env bash
-# Enable copr
 dnf -y copr enable "ngompa/bcachefs"
-
-# Install module for available kernel version
 KVER="$(ls /lib/modules)"
 dnf -y install "kernel-devel-${KVER}"
 dnf -y install bcachefs-kmod
-
-# Move the module to a separate location while removing dkms
 MOD="$(find /lib/modules -type f -name 'bcachefs.ko*' -print -quit)"
 mv "${MOD}" /lib/modules/
-
-# Remove devel files and dkms
 dnf -y --allowerasing remove dkms "kernel-devel-${KVER}"
 mkdir -p "/lib/modules/${KVER}/extra/"
-
-# Put module back and register it
 mv /lib/modules/bcachefs.ko* "/lib/modules/${KVER}/extra/"
 depmod -A
-
-# Further cleanup and install userspace tools
 dnf -y autoremove
 dnf -y install bcachefs-tools
-
 INSTALLBC
 
 # Initramfs config
