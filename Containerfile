@@ -2,7 +2,7 @@ FROM quay.io/fedora/fedora-kinoite:44
 MAINTAINER Pramox Indra
 
 # SETUP FILESYSTEM
-RUN rmdir /opt && ln -s -T /var/opt /opt
+# RUN rmdir /opt && ln -s -T /var/opt /opt
 RUN mkdir /var/roothome
 
 # INSTALL REPOS
