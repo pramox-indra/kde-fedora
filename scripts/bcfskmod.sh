@@ -22,7 +22,7 @@ mkdir -p "/lib/modules/${KVER}/extra/"
 mv /lib/modules/bcachefs.ko* "/lib/modules/${KVER}/extra/"
 
 # Register and cleanup
-depmod -A
+depmod -A -m "/lib/modules/${KVER}"
 dnf -y autoremove
 dnf -y install bcachefs-tools
 
