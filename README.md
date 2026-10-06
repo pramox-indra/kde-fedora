@@ -1,4 +1,5 @@
-# This is a fork for emergency, for me. Not fit for general use
+# This is a fork for emergency, for me. Not fit for general use.
+# This fork has none of what's written below, ONLY bcachefs
 
 # KDE-BOOTC
 The motivation for this project is inspired by the increasing popularity of atomic distros as technology advances. The Fedora project is one of the leaders in bringing this concept to the public, with other projects following suit. This approach offers significant benefits in terms of stability and security.
