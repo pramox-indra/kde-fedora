@@ -1,47 +1,63 @@
-FROM quay.io/fedora/fedora-bootc:44
-MAINTAINER First Last
+FROM quay.io/fedora/fedora-kinoite:44
+MAINTAINER Pramox Indra
 
 # SETUP FILESYSTEM
 RUN rmdir /opt && ln -s -T /var/opt /opt
 RUN mkdir /var/roothome
 
-# PREPARE PACKAGES
-COPY --chmod=0644 ./system/usr__local__share__kde-bootc__packages-removed /usr/local/share/kde-bootc/packages-removed
-COPY --chmod=0644 ./system/usr__local__share__kde-bootc__packages-added /usr/local/share/kde-bootc/packages-added
-RUN jq -r .packages[] /usr/share/rpm-ostree/treefile.json > /usr/local/share/kde-bootc/packages-fedora-bootc
-
 # INSTALL REPOS
 RUN dnf -y install dnf5-plugins
-RUN dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo 
+RUN dnf -y copr enable ngompa/bcachefs
 
-# INSTALL PACKAGES
-RUN dnf -y install @kde-desktop-environment
-RUN grep -vE '^#' /usr/local/share/kde-bootc/packages-added | xargs dnf -y install --allowerasing
+# Prepare bcachefs
+RUN <<BCACHEFS
+#!/usr/bin/env bash
+# Enable copr
+dnf -y copr enable ngompa/bcachefs
 
-# REMOVE PACKAGES
-RUN grep -vE '^#' /usr/local/share/kde-bootc/packages-removed | xargs dnf -y remove
-RUN dnf -y autoremove
-RUN dnf clean all
+# Install module for available kernel version
+KVER="$(ls /lib/modules)"
+dnf -y install "kernel-devel-${KVER}"
+dnf -y install bcachefs-kmod
 
-# ADD SYSTEMD UNITS
-COPY --chmod=0644 ./systemd/usr__lib__systemd__system__firstboot-setup.service /usr/lib/systemd/system/firstboot-setup.service
-COPY --chmod=0644 ./systemd/usr__lib__systemd__system__bootc-fetch.service /usr/lib/systemd/system/bootc-fetch.service
-COPY --chmod=0644 ./systemd/usr__lib__systemd__system__bootc-fetch.timer /usr/lib/systemd/system/bootc-fetch.timer
+# Move the module to a separate location while removing dkms
+MOD="$(find /lib/modules -type f -name 'bcachefs.ko*' -print -quit)"
+mv "${MOD}" /lib/modules/
 
-# ADD CONFIGURATION FILES
-COPY --chmod=0755 ./system/usr__local__bin/* /usr/local/bin/
-COPY --chmod=0644 ./system/etc__skel__kde-bootc /etc/skel/.bashrc.d/kde-bootc
-COPY --chmod=0600 ./system/usr__lib__ostree__auth.json /usr/lib/ostree/auth.json
-COPY --chmod=0644 ./system/usr__lib__credstore__home.create.admin /usr/lib/credstore/home.create.admin
+# Remove devel files and dkms
+dnf -y --allowerasing remove dkms "kernel-devel-${KVER}"
+mkdir -p "/lib/modules/${KVER}/extra/"
 
-# RUN CONFIGURATION SCRIPTS
-COPY --chmod=0755 ./scripts/* /tmp/scripts/
-RUN /tmp/scripts/config-firewall
-RUN /tmp/scripts/config-selinux
-RUN /tmp/scripts/config-systemd
-RUN /tmp/scripts/config-users
-RUN /tmp/scripts/config-authselect
-RUN rm -r /tmp/scripts
+# Put module back and register it
+mv /lib/modules/bcachefs.ko* "/lib/modules/${KVER}/extra/"
+depmod -A
+
+# Further cleanup and install userspace tools
+dnf -y autoremove
+dnf -y install bcachefs-tools
+
+BCACHEFS
+
+# Initramfs config
+RUN <<BCINIT
+
+# Config file
+tee /usr/lib/dracut/dracut.conf.d/bcachefs.conf <<BDC
+# Add bcachefs support
+add_drivers+=" bcachefs "
+filesystems+=" bcachefs "
+
+# Including binary and symlink just-in-case
+install_items+=" /usr/lib/udev/rules.d/64-bcachefs.rules /usr/bin/bcachefs /usr/bin/mount.bcachefs "
+BDC
+
+# Rebuild initramfs
+KVER="$(ls /lib/modules)"
+export DRACUT_NO_XATTR=1
+
+dracut -vf "/usr/lib/modules/${KVER}/initramfs.img" "$KVER"
+
+BCINIT
 
 # CLEAN & CHECK
 RUN find /var/log -type f ! -empty -delete
