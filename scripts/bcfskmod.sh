@@ -8,7 +8,7 @@ dnf -y copr enable "ngompa/bcachefs"
 # Install module as per kernel
 KVER="$(ls /lib/modules)"
 dnf -y install "kernel-devel-${KVER}"
-dnf -y install dkms-*bcachefs
+dnf -y install dkms-bcachefs
 
 # Move module elsewhere
 MOD="$(find /lib/modules -type f -name 'bcachefs.ko*' -print -quit)"
