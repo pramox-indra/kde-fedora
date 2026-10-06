@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora-kinoite:44
+FROM quay.io/fedora/fedora-kinoite:45
 MAINTAINER Pramox Indra
 
 # SETUP FILESYSTEM
