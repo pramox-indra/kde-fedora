@@ -15,7 +15,7 @@ MOD="$(find /lib/modules -type f -name 'bcachefs.ko*' -print -quit)"
 cp -pa "${MOD}" /lib/modules/
 
 # Remove surrounding builddeps
-dnf -y --allowerasing remove dkms "kernel-devel-${KVER}"
+dnf -y remove dkms "kernel-devel-${KVER}"
 mkdir -p "/lib/modules/${KVER}/extra/"
 
 # Move module back
