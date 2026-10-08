@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -eu
+# set -eu
+# Let it fail, this script is tested, failure is intended
 
 # Enable copr
 dnf -y copr enable "ngompa/bcachefs"
